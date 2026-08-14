@@ -1,10 +1,6 @@
 fastapi
 uvicorn[standard]
-sentence-transformers
+fastembed
 chromadb
 google-genai
 pydantic
-# NOTE: torch (a dependency of sentence-transformers) must be installed separately
-# as the CPU-only build BEFORE this file, via the Render Build Command:
-#   pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
-# Otherwise pip pulls the full GPU/CUDA build, which is huge and unnecessary on Render's free tier.
