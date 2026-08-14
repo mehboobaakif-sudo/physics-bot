@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 import chromadb
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from google import genai
 
 # ---------------------------------------------------------------------------
@@ -24,8 +24,11 @@ from google import genai
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print("Loading embedding model...")
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+print("Loading embedding model (ONNX, lightweight)...")
+embed_model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+def embed_text(text: str):
+    return list(embed_model.embed([text]))[0].tolist()
 
 print("Connecting to vector store...")
 chroma_client = chromadb.PersistentClient(path=os.path.join(APP_DIR, "chroma_db"))
@@ -107,9 +110,9 @@ def translate_to_english(question: str):
         return "English", question
 
 def retrieve(english_question: str, n_results: int = 3, max_distance: float = MAX_DISTANCE):
-    q_embedding = embed_model.encode([english_question]).tolist()
+    q_embedding = embed_text(english_question)
     results = collection.query(
-        query_embeddings=q_embedding, n_results=n_results,
+        query_embeddings=[q_embedding], n_results=n_results,
         include=["documents", "metadatas", "distances"]
     )
     docs = results["documents"][0]
