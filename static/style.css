@@ -1,38 +1,33 @@
 /* ---------------------------------------------------------------
-   Physics Sath -- design tokens
-   Paper + textbook-cover green, amber highlighter accent.
-   Signature element: colored "unit tabs" on grounded answers.
+   Physics Study Assistant -- clean, neutral, professional design.
 ------------------------------------------------------------------ */
 :root {
-  --paper: #EEF0EA;
-  --paper-raised: #FAFAF6;
-  --ink: #1F2A24;
-  --ink-soft: #4B564E;
-  --cover-green: #1B4332;
-  --cover-green-dark: #10281D;
-  --amber: #E8A33D;
-  --amber-soft: #F5D9A8;
-  --line: #D9DCCF;
-  --error: #B3452E;
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-alt: #F1F5F9;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-secondary: #64748B;
+  --primary: #0F766E;
+  --primary-dark: #0B5C56;
+  --primary-soft: #E6F4F3;
+  --error: #B91C1C;
+  --error-bg: #FEF2F2;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  --radius: 14px;
+  --radius: 12px;
   --radius-sm: 8px;
 }
 
 * { box-sizing: border-box; }
 
-html, body {
-  height: 100%;
-  margin: 0;
-}
+html, body { height: 100%; margin: 0; }
 
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -43,47 +38,30 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 
 /* ---------- Header ---------- */
 
 .app-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 20px 16px;
-  background: var(--cover-green);
-  color: var(--paper-raised);
-  border-bottom: 4px solid var(--amber);
-}
-
-.header-tab {
-  flex-shrink: 0;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  background: var(--amber);
-  color: var(--cover-green-dark);
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  padding: 8px 5px;
-  border-radius: 5px;
-  transform: rotate(180deg);
+  padding: 18px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
 .header-title h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 22px;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 18px;
   margin: 0;
-  line-height: 1.1;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .header-title p {
   margin: 3px 0 0;
   font-size: 12.5px;
-  color: var(--amber-soft);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -99,26 +77,26 @@ body {
 }
 
 .welcome {
-  background: var(--paper-raised);
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 18px;
   margin-bottom: 4px;
 }
 
 .welcome-lede {
-  font-family: var(--font-display);
-  font-size: 19px;
+  font-family: var(--font);
+  font-size: 16px;
   font-weight: 600;
   margin: 0 0 6px;
-  color: var(--cover-green);
+  color: var(--text);
 }
 
 .welcome-sub {
   margin: 0;
   font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--ink-soft);
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
 .msg-row {
@@ -130,8 +108,8 @@ body {
 .msg-row.bot { justify-content: flex-start; }
 
 .bubble {
-  max-width: 84%;
-  padding: 12px 15px;
+  max-width: 82%;
+  padding: 11px 14px;
   border-radius: var(--radius);
   font-size: 14.5px;
   line-height: 1.55;
@@ -139,37 +117,36 @@ body {
 }
 
 .msg-row.user .bubble {
-  background: var(--cover-green);
-  color: var(--paper-raised);
+  background: var(--primary);
+  color: #FFFFFF;
   border-bottom-right-radius: 4px;
 }
 
 .msg-row.bot .bubble-wrap {
-  max-width: 84%;
+  max-width: 82%;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .msg-row.bot .bubble {
-  background: var(--paper-raised);
-  border: 1px solid var(--line);
-  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
   border-bottom-left-radius: 4px;
 }
 
 .bubble.thinking {
-  color: var(--ink-soft);
-  font-style: italic;
+  color: var(--text-secondary);
 }
 
 .bubble.error {
-  background: #FBEAE4;
-  border-color: var(--error);
+  background: var(--error-bg);
+  border-color: #FCA5A5;
   color: var(--error);
 }
 
-/* Signature element: unit source tabs */
+/* Source references -- subtle neutral badges, not decorative tabs */
 .source-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -181,13 +158,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--amber-soft);
-  color: var(--cover-green-dark);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
   font-size: 11px;
   font-weight: 600;
-  padding: 4px 9px 4px 7px;
-  border-radius: 5px;
-  border-left: 3px solid var(--amber);
+  padding: 4px 9px;
+  border-radius: 999px;
   letter-spacing: 0.01em;
 }
 
@@ -198,35 +174,35 @@ body {
   align-items: center;
   gap: 10px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: var(--paper-raised);
-  border-top: 1px solid var(--line);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
 
 #question-input {
   flex: 1;
-  border: 1.5px solid var(--line);
-  background: var(--paper);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
   border-radius: 999px;
-  padding: 12px 16px;
-  font-family: var(--font-body);
+  padding: 11px 16px;
+  font-family: var(--font);
   font-size: 15px;
-  color: var(--ink);
+  color: var(--text);
   outline: none;
   transition: border-color 0.15s ease;
 }
 
 #question-input:focus {
-  border-color: var(--cover-green);
+  border-color: var(--primary);
 }
 
 #send-btn {
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  background: var(--cover-green);
-  color: var(--paper-raised);
+  background: var(--primary);
+  color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,19 +210,19 @@ body {
   transition: background 0.15s ease, transform 0.1s ease;
 }
 
-#send-btn:hover { background: var(--cover-green-dark); }
+#send-btn:hover { background: var(--primary-dark); }
 #send-btn:active { transform: scale(0.94); }
 #send-btn:disabled { opacity: 0.5; cursor: default; }
 
 #send-btn:focus-visible,
 #question-input:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 /* ---------- Scrollbar (webkit) ---------- */
 .chat::-webkit-scrollbar { width: 6px; }
-.chat::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -255,6 +231,6 @@ body {
 
 /* ---------- Small screens ---------- */
 @media (max-width: 420px) {
-  .header-title h1 { font-size: 19px; }
+  .header-title h1 { font-size: 17px; }
   .bubble, .msg-row.bot .bubble-wrap { max-width: 90%; }
 }
