@@ -3,6 +3,18 @@ const form = document.getElementById('composer');
 const input = document.getElementById('question-input');
 const sendBtn = document.getElementById('send-btn');
 
+// Rolling conversation history, sent with each request so follow-ups
+// like "I don't understand it" can be understood in context.
+let conversationHistory = [];
+const MAX_HISTORY_TURNS = 6; // 3 exchanges
+
+function pushHistory(role, content) {
+  conversationHistory.push({ role, content });
+  if (conversationHistory.length > MAX_HISTORY_TURNS) {
+    conversationHistory = conversationHistory.slice(-MAX_HISTORY_TURNS);
+  }
+}
+
 function scrollToBottom() {
   chat.scrollTop = chat.scrollHeight;
 }
@@ -24,7 +36,7 @@ function addThinkingMessage() {
   row.id = 'thinking-row';
   const bubble = document.createElement('div');
   bubble.className = 'bubble thinking';
-  bubble.textContent = 'Sochte hain...';
+  bubble.textContent = 'Thinking...';
   row.appendChild(bubble);
   chat.appendChild(row);
   scrollToBottom();
@@ -84,7 +96,7 @@ async function askQuestion(question) {
     const res = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question, history: conversationHistory })
     });
 
     removeThinkingMessage();
@@ -97,6 +109,8 @@ async function askQuestion(question) {
 
     const data = await res.json();
     addBotMessage(data.answer, data.sources);
+    pushHistory('user', question);
+    pushHistory('bot', data.answer);
   } catch (err) {
     removeThinkingMessage();
     addErrorMessage('Connection problem -- check your internet and try again.');
