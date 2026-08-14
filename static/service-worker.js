@@ -1,4 +1,4 @@
-const CACHE_NAME = 'physics-sath-v1';
+const CACHE_NAME = 'physics-sath-v3';
 const SHELL_FILES = ['/', '/style.css', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
