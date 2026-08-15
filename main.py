@@ -42,20 +42,37 @@ gemini = genai.Client(api_key=GEMINI_API_KEY)
 MODEL_NAME = "gemini-3.5-flash-lite"
 MAX_DISTANCE = 1.0  # empirically calibrated -- see Day 2 testing notes
 
-TRANSLATE_PROMPT = """You will be given a student's physics question, which may be written in
-English, Urdu (native script), Sindhi (native script), or Roman Urdu (Urdu written in English/Latin letters).
+TRANSLATE_PROMPT = """You will be given a student's latest physics question, and possibly some recent
+conversation history before it. The question may be written in English, Urdu (native script),
+Sindhi (native script), or Roman Urdu (Urdu written in English/Latin letters).
 
-Detect the language, then respond with ONLY a JSON object (no markdown, no explanation) in this exact form:
-{"language": "<English|Urdu|Sindhi|Roman Urdu>", "english_translation": "<the question translated to English>"}
+If the latest message is a vague follow-up on its own (like "I don't understand", "explain simpler",
+"what does that mean", "why"), use the conversation history to figure out what physics topic it
+actually refers to, and produce an english_translation that captures the real intent -- e.g. if the
+student previously asked about the resistance formula and now says "I don't understand it", the
+english_translation should be something like "explain the resistance formula R = V/I in a simpler way",
+NOT a literal translation of "I don't understand it" alone.
+
+Detect the language of the LATEST message, then respond with ONLY a JSON object (no markdown, no
+explanation) in this exact form:
+{"language": "<English|Urdu|Sindhi|Roman Urdu>", "english_translation": "<the real intent, translated/expanded to English>"}
 """
 
-ANSWER_SYSTEM_PROMPT = """You are a helpful physics tutor for a Matric-level (Class 10, Sindh Textbook Board) student.
-Answer the student's question using ONLY the textbook excerpts provided below.
+ANSWER_SYSTEM_PROMPT = """You are a helpful physics tutor for a Matric-level (Class 10, Sindh Textbook Board) student,
+chatting with the student turn by turn -- use any conversation history given to you so follow-ups like
+"I don't understand" or "explain simpler" are answered about the right topic, in a genuinely simpler way,
+rather than being treated as a brand new unrelated question.
+
+Answer using ONLY the textbook excerpts provided below.
 
 Before answering, check: do the excerpts actually define, explain, or directly discuss the specific concept being asked about -- not just share a word or two in common with it?
 If the excerpts do not substantively cover the exact concept asked about, say clearly (in the student's own language) that this topic is not covered in the textbook material provided.
 
 When you do have real supporting content, keep answers clear, use the same terms and explanation style as the textbook, and include relevant formulas if present in the excerpts.
+
+FORMATTING: Never use LaTeX or markdown math notation (no $, $$, \\frac, \\times, etc). Write formulas
+in plain text instead, e.g. "R = V / I" or "F = (k * q1 * q2) / r^2". Keep the rest of the answer as
+plain, simple text too -- no markdown headers or bullet asterisks, since this is a plain chat bubble.
 
 IMPORTANT: Respond in the SAME language the student asked in (given to you below as "Respond in: <language>").
 If the language is "Roman Urdu", write your answer in Roman Urdu too (Urdu words spelled out in English letters), not in Urdu script or English.
@@ -94,13 +111,24 @@ def check_rate_limit(ip: str):
 # Core pipeline (same logic validated in Day 2 testing)
 # ---------------------------------------------------------------------------
 
-def translate_to_english(question: str):
+def format_history(history):
+    if not history:
+        return ""
+    lines = []
+    for turn in history[-6:]:  # last 3 exchanges max
+        role = "Student" if turn.get("role") == "user" else "Tutor"
+        lines.append(f"{role}: {turn.get('content', '')}")
+    return "\n".join(lines)
+
+def translate_to_english(question: str, history=None):
+    history_text = format_history(history)
+    contents = question if not history_text else f"Recent conversation:\n{history_text}\n\nLatest message: {question}"
     response = gemini.models.generate_content(
         model=MODEL_NAME,
         config=genai.types.GenerateContentConfig(
-            system_instruction=TRANSLATE_PROMPT, max_output_tokens=200
+            system_instruction=TRANSLATE_PROMPT, max_output_tokens=250
         ),
-        contents=question,
+        contents=contents,
     )
     raw = re.sub(r'^```json\s*|\s*```$', '', response.text.strip())
     try:
@@ -120,15 +148,18 @@ def retrieve(english_question: str, n_results: int = 3, max_distance: float = MA
     dists = results["distances"][0]
     return [(d, m, dist) for d, m, dist in zip(docs, metas, dists) if dist <= max_distance]
 
-def generate_answer(original_question: str, language: str, retrieved):
+def generate_answer(original_question: str, language: str, retrieved, history=None):
+    history_text = format_history(history)
+    history_block = f"\nRecent conversation:\n{history_text}\n" if history_text else ""
+
     if not retrieved:
         response = gemini.models.generate_content(
             model=MODEL_NAME,
             config=genai.types.GenerateContentConfig(
-                system_instruction=f"Tell the student, in {language}, that this topic isn't covered in the textbook. Be brief and kind.",
+                system_instruction=f"Tell the student, in {language}, that this topic isn't covered in the textbook. Be brief and kind. No LaTeX or markdown.",
                 max_output_tokens=100,
             ),
-            contents=original_question,
+            contents=f"{history_block}\nStudent's latest message: {original_question}",
         )
         return response.text, []
 
@@ -137,10 +168,10 @@ def generate_answer(original_question: str, language: str, retrieved):
     )
     user_message = f"""Textbook excerpts:
 {context}
-
+{history_block}
 Respond in: {language}
 
-Student question (original): {original_question}"""
+Student's latest message (original): {original_question}"""
 
     response = gemini.models.generate_content(
         model=MODEL_NAME,
@@ -168,6 +199,7 @@ app = FastAPI(title="Physics Book Chatbot")
 
 class AskRequest(BaseModel):
     question: str
+    history: list = []   # list of {"role": "user"|"bot", "content": str}, most recent last
 
 class AskResponse(BaseModel):
     answer: str
@@ -185,10 +217,12 @@ def ask(req: AskRequest, request: Request):
     if len(question) > 500:
         raise HTTPException(status_code=400, detail="Question is too long.")
 
+    history = req.history[-6:] if req.history else []
+
     try:
-        language, english_q = translate_to_english(question)
+        language, english_q = translate_to_english(question, history)
         retrieved = retrieve(english_q)
-        answer, sources = generate_answer(question, language, retrieved)
+        answer, sources = generate_answer(question, language, retrieved, history)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong generating an answer: {e}")
 
