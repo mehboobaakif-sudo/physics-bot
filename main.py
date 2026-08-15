@@ -42,9 +42,13 @@ gemini = genai.Client(api_key=GEMINI_API_KEY)
 MODEL_NAME = "gemini-3.5-flash-lite"
 MAX_DISTANCE = 1.0  # empirically calibrated -- see Day 2 testing notes
 
-TRANSLATE_PROMPT = """You will be given a student's latest physics question, and possibly some recent
-conversation history before it. The question may be written in English, Urdu (native script),
+TRANSLATE_PROMPT = """You will be given a student's latest message, and possibly some recent
+conversation history before it. It may be written in English, Urdu (native script),
 Sindhi (native script), or Roman Urdu (Urdu written in English/Latin letters).
+
+First, classify the latest message as one of:
+- "greeting": a hello/greeting/thanks/bye or pure small talk with no physics content (e.g. "hi", "salam", "thanks", "ok bye")
+- "question": an actual physics question or a follow-up on a physics topic (e.g. "what is ohm's law", "I don't understand it", "explain simpler")
 
 If the latest message is a vague follow-up on its own (like "I don't understand", "explain simpler",
 "what does that mean", "why"), use the conversation history to figure out what physics topic it
@@ -55,7 +59,15 @@ NOT a literal translation of "I don't understand it" alone.
 
 Detect the language of the LATEST message, then respond with ONLY a JSON object (no markdown, no
 explanation) in this exact form:
-{"language": "<English|Urdu|Sindhi|Roman Urdu>", "english_translation": "<the real intent, translated/expanded to English>"}
+{"language": "<English|Urdu|Sindhi|Roman Urdu>", "message_type": "<greeting|question>", "english_translation": "<the real intent, translated/expanded to English -- for greetings, just translate the greeting itself>"}
+"""
+
+GREETING_PROMPT = """You are a friendly physics tutor chatbot for a Class 10 (Sindh Textbook Board) student.
+The student just sent a greeting or small talk, not a physics question. Reply warmly and briefly (1-2 sentences)
+in the SAME language they used (told to you as "Respond in: <language>"), and if it's a first greeting,
+mention you can help with Units 10-20 of their physics textbook (waves, sound, light, electricity, electronics,
+nuclear physics). No LaTeX or markdown. If it's a thanks/goodbye, just respond warmly and briefly without
+re-introducing yourself.
 """
 
 ANSWER_SYSTEM_PROMPT = """You are a helpful physics tutor for a Matric-level (Class 10, Sindh Textbook Board) student,
@@ -133,9 +145,23 @@ def translate_to_english(question: str, history=None):
     raw = re.sub(r'^```json\s*|\s*```$', '', response.text.strip())
     try:
         data = json.loads(raw)
-        return data["language"], data["english_translation"]
+        return data["language"], data.get("message_type", "question"), data["english_translation"]
     except Exception:
-        return "English", question
+        return "English", "question", question
+
+def generate_greeting_reply(original_message: str, language: str, history=None):
+    history_text = format_history(history)
+    contents = f"Respond in: {language}\n\nStudent's message: {original_message}"
+    if history_text:
+        contents = f"Recent conversation:\n{history_text}\n\n{contents}"
+    response = gemini.models.generate_content(
+        model=MODEL_NAME,
+        config=genai.types.GenerateContentConfig(
+            system_instruction=GREETING_PROMPT, max_output_tokens=150
+        ),
+        contents=contents,
+    )
+    return response.text
 
 def retrieve(english_question: str, n_results: int = 3, max_distance: float = MAX_DISTANCE):
     q_embedding = embed_text(english_question)
@@ -220,7 +246,12 @@ def ask(req: AskRequest, request: Request):
     history = req.history[-6:] if req.history else []
 
     try:
-        language, english_q = translate_to_english(question, history)
+        language, message_type, english_q = translate_to_english(question, history)
+
+        if message_type == "greeting":
+            answer = generate_greeting_reply(question, language, history)
+            return AskResponse(answer=answer, language=language, sources=[])
+
         retrieved = retrieve(english_q)
         answer, sources = generate_answer(question, language, retrieved, history)
     except Exception as e:
