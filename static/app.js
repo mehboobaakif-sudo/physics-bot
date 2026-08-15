@@ -15,6 +15,13 @@ function pushHistory(role, content) {
   }
 }
 
+function makeAvatar() {
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.innerHTML = '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" stroke="white" stroke-width="1.8"/><circle cx="10" cy="10" r="1.6" fill="white"/></svg>';
+  return avatar;
+}
+
 function scrollToBottom() {
   chat.scrollTop = chat.scrollHeight;
 }
@@ -34,6 +41,7 @@ function addThinkingMessage() {
   const row = document.createElement('div');
   row.className = 'msg-row bot';
   row.id = 'thinking-row';
+  row.appendChild(makeAvatar());
   const bubble = document.createElement('div');
   bubble.className = 'bubble thinking';
   bubble.textContent = 'Thinking...';
@@ -50,6 +58,7 @@ function removeThinkingMessage() {
 function addBotMessage(answer, sources) {
   const row = document.createElement('div');
   row.className = 'msg-row bot';
+  row.appendChild(makeAvatar());
 
   const wrap = document.createElement('div');
   wrap.className = 'bubble-wrap';
@@ -79,6 +88,7 @@ function addBotMessage(answer, sources) {
 function addErrorMessage(text) {
   const row = document.createElement('div');
   row.className = 'msg-row bot';
+  row.appendChild(makeAvatar());
   const bubble = document.createElement('div');
   bubble.className = 'bubble error';
   bubble.textContent = text;
